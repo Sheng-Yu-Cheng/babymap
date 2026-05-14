@@ -190,9 +190,12 @@ export const babysitters = [
     rating: 4.9,
     availableTime: "今天 14:00-18:00",
     price: "NT$450 / hr",
+    hourlyRate: 450,
+    certified: true,
+    certification: "政府登記",
     experience: "6 年經驗",
     tags: ["到府照顧", "0-3歲", "政府登記"],
-    safety: ["身分驗證", "服務紀錄", "緊急聯絡"],
+    safety: ["政府登記", "身分驗證", "服務紀錄", "緊急聯絡", "雙向評價"],
   },
   {
     id: "b2",
@@ -201,9 +204,12 @@ export const babysitters = [
     rating: 4.8,
     availableTime: "最快 30 分鐘後",
     price: "NT$420 / hr",
+    hourlyRate: 420,
+    certified: true,
+    certification: "合格保母",
     experience: "5 年經驗",
     tags: ["臨時托育", "接送服務", "雙向評價"],
-    safety: ["背景審查", "家長評價", "平台保障"],
+    safety: ["政府登記", "身分驗證", "服務紀錄", "緊急聯絡", "雙向評價"],
   },
   {
     id: "b3",
@@ -212,10 +218,23 @@ export const babysitters = [
     rating: 4.7,
     availableTime: "今天 18:00-21:00",
     price: "NT$390 / hr",
+    hourlyRate: 390,
+    certified: true,
+    certification: "托育人員登記",
     experience: "3 年經驗",
     tags: ["晚間支援", "幼兒照顧", "可短時段"],
-    safety: ["身分驗證", "雙向評價", "緊急聯絡"],
+    safety: ["政府登記", "身分驗證", "服務紀錄", "緊急聯絡", "雙向評價"],
   },
+];
+
+export const bookingServiceTypes = ["到府照顧", "臨時托育", "接送服務", "產後短時支援"];
+
+export const bookingSafetyProtections = [
+  "政府登記",
+  "身分驗證",
+  "服務紀錄",
+  "緊急聯絡",
+  "雙向評價",
 ];
 
 export const subsidies = [

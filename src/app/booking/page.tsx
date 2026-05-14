@@ -9,8 +9,8 @@ export default function BookingPage() {
     <main>
       <PageHero
         eyebrow="即時保姆預約"
-        title="臨時需要照護時，快速找到合格保母"
-        description="BabyCare Now 用 demo 呈現地點、時段、需求、保母清單與安全提示，讓臨時托育不再只能靠運氣。"
+        title="即時保姆預約"
+        description="當父母突然加班、原本照顧者臨時取消，或家中出現緊急照護需求時，BabyCare Now 示範如何快速找到附近合格保母。此頁為前端 demo，不會送出真實預約。"
       />
       <BabysitterSection />
       <SafetySection />
