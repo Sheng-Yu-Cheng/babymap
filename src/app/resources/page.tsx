@@ -12,7 +12,7 @@ export default function ResourcesPage() {
       <PageHero
         eyebrow="托育資源地圖"
         title="找到附近可用的育兒支持"
-        description="把托育、親子空間、照護設備與醫療資源放到同一個視角裡，讓社會支持變得可見。"
+        description="把托育、親子空間、照護設備與小兒科資源放到同一個入口，讓育兒支持不只查得到，也用得到。"
       />
       <ResourceMapSection />
       <Section title="資源類型" description="正式版本可以擴充成篩選器與地圖圖層。">
