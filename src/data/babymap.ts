@@ -1,6 +1,7 @@
 import {
   Baby,
   CalendarCheck,
+  ClipboardCheck,
   HeartHandshake,
   MapPin,
   MessageCircleQuestion,
@@ -10,11 +11,62 @@ import {
 } from "lucide-react";
 
 export const navItems = [
-  { label: "功能", href: "#features" },
-  { label: "即時保姆", href: "#babysitters" },
-  { label: "補助試算", href: "#budget" },
-  { label: "托育地圖", href: "#resources" },
-  { label: "焦慮破解", href: "#anxiety" },
+  { label: "即時保姆", href: "/booking" },
+  { label: "補助試算", href: "/subsidies" },
+  { label: "托育地圖", href: "/resources" },
+  { label: "焦慮破解", href: "/anxiety" },
+  { label: "父職專區", href: "/dad-mode" },
+];
+
+export const portalActions = [
+  {
+    title: "查找育兒資源",
+    description: "從公托、親子館到兒科診所，先看見附近有哪些支持。",
+    href: "/resources",
+    icon: MapPin,
+  },
+  {
+    title: "預約即時保姆",
+    description: "臨時加班、長輩無法支援時，查看合格保母媒合流程。",
+    href: "/booking",
+    icon: Baby,
+  },
+  {
+    title: "破解生育焦慮",
+    description: "把社群上的模糊恐懼，轉成可查證、可處理的問題。",
+    href: "/anxiety",
+    icon: MessageCircleQuestion,
+  },
+];
+
+export const portalCategories = [
+  {
+    title: "生育前規劃",
+    description: "補助試算、時間軸、父職準備，先把流程和分工看清楚。",
+    links: [
+      { label: "補助與預算試算", href: "/subsidies" },
+      { label: "生育時間軸導航", href: "/roadmap" },
+      { label: "父職專區", href: "/dad-mode" },
+    ],
+  },
+  {
+    title: "托育與照護",
+    description: "把附近資源、臨時保母與安全機制整理成可使用的支持。",
+    links: [
+      { label: "即時保姆預約", href: "/booking" },
+      { label: "托育資源地圖", href: "/resources" },
+      { label: "安全與認證機制", href: "/safety" },
+    ],
+  },
+  {
+    title: "資訊與支持",
+    description: "用真實案例與焦慮破解，降低被負面敘事放大的不確定感。",
+    links: [
+      { label: "社群焦慮破解", href: "/anxiety" },
+      { label: "真實育兒案例", href: "/stories" },
+      { label: "安全與認證機制", href: "/safety" },
+    ],
+  },
 ];
 
 export const featureCards = [
@@ -64,6 +116,68 @@ export const featureCards = [
     title: "真實案例",
     description: "用不誇張的家庭故事呈現可行的支持組合。",
     tag: "正向 cues",
+    icon: HeartHandshake,
+  },
+];
+
+export const relatedFeatureLinks = {
+  booking: [
+    { label: "托育資源地圖", href: "/resources" },
+    { label: "安全與認證機制", href: "/safety" },
+    { label: "補助與預算試算", href: "/subsidies" },
+  ],
+  subsidies: [
+    { label: "生育時間軸導航", href: "/roadmap" },
+    { label: "托育資源地圖", href: "/resources" },
+  ],
+  resources: [
+    { label: "即時保姆預約", href: "/booking" },
+    { label: "安全與認證機制", href: "/safety" },
+    { label: "真實育兒案例", href: "/stories" },
+  ],
+  anxiety: [
+    { label: "補助與預算試算", href: "/subsidies" },
+    { label: "父職專區", href: "/dad-mode" },
+    { label: "真實育兒案例", href: "/stories" },
+  ],
+  roadmap: [
+    { label: "補助與預算試算", href: "/subsidies" },
+    { label: "父職專區", href: "/dad-mode" },
+  ],
+  stories: [
+    { label: "社群焦慮破解", href: "/anxiety" },
+    { label: "補助與預算試算", href: "/subsidies" },
+    { label: "托育資源地圖", href: "/resources" },
+  ],
+  dadMode: [
+    { label: "生育時間軸導航", href: "/roadmap" },
+    { label: "社群焦慮破解", href: "/anxiety" },
+    { label: "補助與預算試算", href: "/subsidies" },
+  ],
+  safety: [{ label: "即時保姆預約", href: "/booking" }],
+};
+
+export const dadModeItems = [
+  "陪產假與育嬰假怎麼請",
+  "夜間照顧如何分工",
+  "產後伴侶支持清單",
+  "爸爸與孩子互動活動",
+];
+
+export const safetySteps = [
+  {
+    title: "資格與身份驗證",
+    description: "確認政府登記、身份資料、服務範圍與可服務年齡。",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "服務紀錄留存",
+    description: "每次媒合留下時間、地點、需求與緊急聯絡資訊。",
+    icon: ShieldCheck,
+  },
+  {
+    title: "雙向評價機制",
+    description: "家長與保母都能留下回饋，讓下一次選擇更安心。",
     icon: HeartHandshake,
   },
 ];
