@@ -4,10 +4,11 @@ import { Baby, Building2, HeartPulse, Home, Milk, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Section } from "@/components/Section";
-import { childcareResources } from "@/data/babymap";
+import { getChildcareResources } from "@/lib/data/childcareResources";
 import { cn } from "@/lib/utils";
 
 const resourceTypes = ["全部", "公托", "準公托", "保母", "親子館", "哺乳室", "小兒科"];
+const childcareResources = getChildcareResources();
 
 const markerStyles = {
   公托: {

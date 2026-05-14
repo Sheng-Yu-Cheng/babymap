@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
 import { Section } from "@/components/Section";
-import { subsidies } from "@/data/babymap";
+import { getSubsidyOffices } from "@/lib/data/subsidyOffices";
 import { cn } from "@/lib/utils";
 
 const cityOptions = ["台北市", "新北市", "桃園市", "台中市", "高雄市"];
@@ -24,6 +24,7 @@ function formatCurrency(amount: number) {
 }
 
 export function BudgetSection() {
+  const subsidyOffices = getSubsidyOffices();
   const [city, setCity] = useState(cityOptions[0]);
   const [monthlyIncome, setMonthlyIncome] = useState(90000);
   const [childOrder, setChildOrder] = useState(childOrderOptions[0]);
@@ -182,7 +183,7 @@ export function BudgetSection() {
       <div className="mt-6">
         <h3 className="text-lg font-semibold">可申請補助項目 Demo</h3>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {subsidies.map((subsidy) => (
+          {subsidyOffices.map((subsidy) => (
             <article key={subsidy.id} className="rounded-2xl border border-border bg-white p-5 shadow-sm">
               <h3 className="font-semibold">{subsidy.title}</h3>
               <p className="mt-3 text-lg font-bold text-primary">{subsidy.amount}</p>
