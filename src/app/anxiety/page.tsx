@@ -10,20 +10,16 @@ export default function AnxietyPage() {
       <PageHero
         eyebrow="社群焦慮破解 / Ask BabyMap"
         title="把焦慮轉成可以處理的問題"
-        description="BabyMap 不否認育兒壓力，而是把社群敘事拆成預算、照護、分工與可用資源。"
+        description="BabyMap 不否認育兒壓力，也不催促任何人做決定；它把社群敘事拆成預算、照護、分工與可用資源。"
       />
       <AnxietyBreakerSection />
-      <Section title="Ask BabyMap mock input" description="這是前端 demo，不串接真實 AI。">
-        <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
-          <label className="text-sm font-medium">
-            輸入你看到的焦慮說法
-            <input
-              className="mt-3 w-full rounded-2xl border border-border px-4 py-3"
-              defaultValue="社群都說生小孩會失去自由，是真的嗎？"
-            />
-          </label>
-          <p className="mt-4 rounded-2xl bg-muted p-4 text-sm leading-6 text-muted-foreground">
-            Demo 回應：自由會被重新安排，但可以透過伴侶分工、托育資源與臨時支援降低單一照顧者的壓力。
+      <Section
+        title="為什麼需要焦慮破解？"
+        description="社群內容常把極端經驗推到眼前，讓原本可以討論的問題變成一團模糊恐懼。"
+      >
+        <div className="rounded-[1.75rem] border border-border bg-white p-6 shadow-sm">
+          <p className="max-w-3xl text-lg leading-8 text-foreground">
+            數位媒體可能放大焦慮，但數位工具也可以成為支持系統。BabyMap 的重點不是說服你生，而是把「我好害怕」拆成「我需要查補助、找托育、討論分工，或準備臨時支援」。
           </p>
         </div>
       </Section>
