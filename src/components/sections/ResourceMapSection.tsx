@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { Section } from "@/components/Section";
 import type { ChildcareResource, TaipeiResourceSourceStatusMap } from "@/lib/data/taipeiResources";
+import { getDemoCoordinate } from "@/lib/map/demoCoordinates";
 import { cn } from "@/lib/utils";
 
 const MAX_MAP_MARKERS = 80;
@@ -97,6 +98,7 @@ export function ResourceMapSection({
   const [reservableOnly, setReservableOnly] = useState(false);
   const [realDataOnly, setRealDataOnly] = useState(false);
   const [selectedId, setSelectedId] = useState<string | undefined>(resources[0]?.id);
+  const [detailResource, setDetailResource] = useState<ChildcareResource | null>(null);
   const [page, setPage] = useState(1);
 
   const filteredResources = useMemo(
@@ -137,6 +139,16 @@ export function ResourceMapSection({
 
   function resetToFirstPage() {
     setPage(1);
+  }
+
+  async function copyAddress(address?: string) {
+    if (!address) return;
+    await navigator.clipboard?.writeText(address);
+  }
+
+  function openDetails(resource: ChildcareResource) {
+    setSelectedId(resource.id);
+    setDetailResource(resource);
   }
 
   return (
@@ -355,11 +367,11 @@ export function ResourceMapSection({
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      setSelectedId(resource.id);
+                      openDetails(resource);
                     }}
                     className="mt-5 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
                   >
-                    查看資料
+                    查看詳情
                   </button>
                 </article>
               ))}
@@ -388,7 +400,109 @@ export function ResourceMapSection({
           </div>
         </div>
       </div>
+
+      {detailResource ? (
+        <ResourceDetailModal
+          resource={detailResource}
+          onClose={() => setDetailResource(null)}
+          onCopyAddress={copyAddress}
+          onSelect={() => {
+            setSelectedId(detailResource.id);
+            setDetailResource(null);
+          }}
+        />
+      ) : null}
     </Section>
+  );
+}
+
+function ResourceDetailModal({
+  resource,
+  onClose,
+  onCopyAddress,
+  onSelect,
+}: {
+  resource: ChildcareResource;
+  onClose: () => void;
+  onCopyAddress: (address?: string) => void;
+  onSelect: () => void;
+}) {
+  const coordinate = getDemoCoordinate(resource, 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-foreground/35 p-4 sm:items-center sm:justify-center">
+      <article className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-[1.75rem] border border-border bg-white p-6 shadow-soft">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
+                {resource.typeLabel}
+              </span>
+              <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                {resource.isRealData ? "公開資料" : "Demo"}
+              </span>
+            </div>
+            <h2 className="mt-3 text-2xl font-bold">{resource.name}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-border px-3 py-1 text-sm font-medium"
+          >
+            關閉
+          </button>
+        </div>
+
+        <dl className="mt-6 grid gap-4 text-sm leading-6">
+          <DetailRow label="地址" value={resource.address} />
+          <DetailRow
+            label="電話"
+            value={resource.phone ? `${resource.phone}${resource.extension ? ` #${resource.extension}` : ""}` : undefined}
+          />
+          <DetailRow label="開放時間" value={resource.openingHours} />
+          <DetailRow label="資料來源" value={resource.sourceName} />
+          <DetailRow
+            label="地圖定位"
+            value={coordinate.isDemoCoordinate ? "demo 視覺化定位" : "資料含座標"}
+          />
+        </dl>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => onCopyAddress(resource.address)}
+            disabled={!resource.address}
+            className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            複製地址
+          </button>
+          {resource.phone ? (
+            <a
+              href={`tel:${resource.phone}`}
+              className="rounded-full border border-border px-5 py-3 text-center text-sm font-semibold text-foreground"
+            >
+              撥打電話
+            </a>
+          ) : null}
+          <button
+            type="button"
+            onClick={onSelect}
+            className="rounded-full border border-border px-5 py-3 text-sm font-semibold text-foreground"
+          >
+            在地圖上選取
+          </button>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="rounded-2xl bg-muted p-4">
+      <dt className="font-medium text-foreground">{label}</dt>
+      <dd className="mt-1 text-muted-foreground">{value || "未提供"}</dd>
+    </div>
   );
 }
 
