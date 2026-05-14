@@ -4,10 +4,27 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 
 import { Section } from "@/components/Section";
-import type { ChildcareResource } from "@/lib/data/taipeiResources";
+import type { ChildcareResource, TaipeiResourceSourceStatusMap } from "@/lib/data/taipeiResources";
 import { cn } from "@/lib/utils";
 
+const MAX_MAP_MARKERS = 80;
+const PAGE_SIZE = 20;
 const resourceTypes = ["全部", "托嬰中心", "親子館", "哺集乳室"];
+const districtOptions = [
+  "全部行政區",
+  "中正區",
+  "大同區",
+  "中山區",
+  "松山區",
+  "大安區",
+  "萬華區",
+  "信義區",
+  "士林區",
+  "北投區",
+  "內湖區",
+  "南港區",
+  "文山區",
+];
 
 const ResourceLeafletMap = dynamic(
   () => import("@/components/map/ResourceLeafletMap").then((mod) => mod.ResourceLeafletMap),
@@ -24,37 +41,103 @@ const ResourceLeafletMap = dynamic(
 type ResourceMapSectionProps = {
   resources: ChildcareResource[];
   usingFallback?: boolean;
+  sourceStatus?: TaipeiResourceSourceStatusMap;
 };
 
-export function ResourceMapSection({ resources, usingFallback = false }: ResourceMapSectionProps) {
-  const districtOptions = useMemo(() => {
-    const districts = resources
-      .map((resource) => resource.district)
-      .filter((district): district is string => Boolean(district));
+const sourceSummaryItems = [
+  { key: "publicNursery", label: "托嬰中心" },
+  { key: "parentChildCenters", label: "親子館" },
+  { key: "breastfeedingRooms", label: "哺集乳室" },
+] as const;
 
-    return ["全部", ...Array.from(new Set(districts)).slice(0, 12)];
-  }, [resources]);
-  const [region, setRegion] = useState("全部");
+function searchText(resource: ChildcareResource) {
+  return [
+    resource.name,
+    resource.typeLabel,
+    resource.address,
+    resource.district,
+    resource.notes,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function getMapResources(resources: ChildcareResource[], resourceType: string) {
+  if (resourceType !== "全部") {
+    return resources.slice(0, MAX_MAP_MARKERS);
+  }
+
+  const nursery = resources.filter((resource) => resource.typeLabel === "托嬰中心").slice(0, 30);
+  const parentChildCenters = resources.filter((resource) => resource.typeLabel === "親子館").slice(0, 25);
+  const breastfeedingRooms = resources.filter((resource) => resource.typeLabel === "哺集乳室").slice(0, 25);
+  const balancedResources = [...nursery, ...parentChildCenters, ...breastfeedingRooms];
+
+  if (balancedResources.length >= MAX_MAP_MARKERS) {
+    return balancedResources.slice(0, MAX_MAP_MARKERS);
+  }
+
+  const seenIds = new Set(balancedResources.map((resource) => resource.id));
+  const fillResources = resources
+    .filter((resource) => !seenIds.has(resource.id))
+    .slice(0, MAX_MAP_MARKERS - balancedResources.length);
+
+  return [...balancedResources, ...fillResources];
+}
+
+export function ResourceMapSection({
+  resources,
+  usingFallback = false,
+  sourceStatus,
+}: ResourceMapSectionProps) {
+  const [region, setRegion] = useState("全部行政區");
   const [resourceType, setResourceType] = useState("全部");
+  const [keyword, setKeyword] = useState("");
   const [openOnly, setOpenOnly] = useState(false);
   const [reservableOnly, setReservableOnly] = useState(false);
   const [realDataOnly, setRealDataOnly] = useState(false);
   const [selectedId, setSelectedId] = useState<string | undefined>(resources[0]?.id);
+  const [page, setPage] = useState(1);
 
   const filteredResources = useMemo(
     () =>
       resources.filter((resource) => {
-        if (region !== "全部" && resource.district !== region) return false;
+        const normalizedKeyword = keyword.trim().toLowerCase();
+
+        if (region !== "全部行政區" && resource.district !== region) return false;
         if (resourceType !== "全部" && resource.typeLabel !== resourceType) return false;
+        if (normalizedKeyword && !searchText(resource).includes(normalizedKeyword)) return false;
         if (openOnly && !resource.openingHours) return false;
         if (reservableOnly && resource.typeLabel !== "托嬰中心" && resource.typeLabel !== "親子館") return false;
         if (realDataOnly && !resource.isRealData) return false;
         return true;
       }),
-    [openOnly, realDataOnly, region, reservableOnly, resourceType, resources],
+    [keyword, openOnly, realDataOnly, region, reservableOnly, resourceType, resources],
   );
+  const mapResources = useMemo(
+    () => getMapResources(filteredResources, resourceType),
+    [filteredResources, resourceType],
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredResources.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedResources = filteredResources.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const selectedResource =
     filteredResources.find((resource) => resource.id === selectedId) ?? filteredResources[0];
+  const isFiltered =
+    region !== "全部行政區" ||
+    resourceType !== "全部" ||
+    keyword.trim().length > 0 ||
+    openOnly ||
+    reservableOnly ||
+    realDataOnly;
+  const resultSummary = isFiltered
+    ? `符合條件 ${filteredResources.length} 筆，地圖顯示 ${mapResources.length} 筆`
+    : `共 ${resources.length} 筆，地圖顯示前 ${mapResources.length} 筆`;
+  const showBreastfeedingHint = resourceType === "哺集乳室" && filteredResources.length > MAX_MAP_MARKERS;
+
+  function resetToFirstPage() {
+    setPage(1);
+  }
 
   return (
     <Section
@@ -66,8 +149,30 @@ export function ResourceMapSection({ resources, usingFallback = false }: Resourc
     >
       <div className="mb-6 rounded-[1.5rem] border border-border bg-white p-4 text-sm leading-6 text-muted-foreground shadow-sm">
         <p>部分資料來源：臺北市資料大平臺</p>
+        {sourceStatus ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {sourceSummaryItems.map((item) => {
+              const status = sourceStatus[item.key];
+
+              return (
+                <span
+                  key={item.key}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium",
+                    status.ok ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {status.ok ? `${item.label} ${status.normalizedRows} 筆` : `${item.label}：該資料來源暫時無法讀取`}
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
         <p className="mt-2">
           地圖點位為 demo 視覺化定位；資源名稱、地址與聯絡資訊來自公開資料或備用資料。
+        </p>
+        <p className="mt-2">
+          由於公開資料多數僅提供地址，正式版本可透過離線地理編碼產生精準座標。
         </p>
         {usingFallback ? (
           <p className="mt-2 text-primary">
@@ -88,13 +193,29 @@ export function ResourceMapSection({ resources, usingFallback = false }: Resourc
               地區
               <select
                 value={region}
-                onChange={(event) => setRegion(event.target.value)}
+                onChange={(event) => {
+                  setRegion(event.target.value);
+                  resetToFirstPage();
+                }}
                 className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 outline-none focus:border-primary"
               >
                 {districtOptions.map((district) => (
                   <option key={district}>{district}</option>
                 ))}
               </select>
+            </label>
+
+            <label className="block text-sm font-medium">
+              關鍵字搜尋
+              <input
+                value={keyword}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  resetToFirstPage();
+                }}
+                className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 outline-none focus:border-primary"
+                placeholder="搜尋名稱、地址、備註..."
+              />
             </label>
 
             <div>
@@ -104,7 +225,10 @@ export function ResourceMapSection({ resources, usingFallback = false }: Resourc
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setResourceType(type)}
+                    onClick={() => {
+                      setResourceType(type);
+                      resetToFirstPage();
+                    }}
                     className={cn(
                       "rounded-full border px-3 py-2 text-sm font-medium transition",
                       resourceType === type
@@ -119,13 +243,31 @@ export function ResourceMapSection({ resources, usingFallback = false }: Resourc
             </div>
 
             <div className="grid gap-3">
-              <FilterToggle active={openOnly} onClick={() => setOpenOnly((value) => !value)}>
+              <FilterToggle
+                active={openOnly}
+                onClick={() => {
+                  setOpenOnly((value) => !value);
+                  resetToFirstPage();
+                }}
+              >
                 是否開放中
               </FilterToggle>
-              <FilterToggle active={reservableOnly} onClick={() => setReservableOnly((value) => !value)}>
+              <FilterToggle
+                active={reservableOnly}
+                onClick={() => {
+                  setReservableOnly((value) => !value);
+                  resetToFirstPage();
+                }}
+              >
                 是否可預約
               </FilterToggle>
-              <FilterToggle active={realDataOnly} onClick={() => setRealDataOnly((value) => !value)}>
+              <FilterToggle
+                active={realDataOnly}
+                onClick={() => {
+                  setRealDataOnly((value) => !value);
+                  resetToFirstPage();
+                }}
+              >
                 只看公開資料
               </FilterToggle>
             </div>
@@ -137,12 +279,17 @@ export function ResourceMapSection({ resources, usingFallback = false }: Resourc
             <div className="mb-3 flex flex-col gap-2 px-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-primary">OpenStreetMap · {region}</p>
-                <h3 className="mt-1 text-xl font-semibold">附近可用資源 {filteredResources.length} 個</h3>
+                <h3 className="mt-1 text-xl font-semibold">{resultSummary}</h3>
               </div>
               <p className="text-sm text-muted-foreground">未使用地址即時 geocoding。</p>
             </div>
+            {showBreastfeedingHint ? (
+              <p className="mb-3 rounded-2xl bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
+                哺集乳室資料量較大，建議使用行政區或關鍵字縮小範圍。
+              </p>
+            ) : null}
             <ResourceLeafletMap
-              resources={filteredResources}
+              resources={mapResources}
               selectedId={selectedResource?.id}
               onSelect={setSelectedId}
             />
@@ -168,7 +315,7 @@ export function ResourceMapSection({ resources, usingFallback = false }: Resourc
               <span className="text-sm font-medium text-primary">{filteredResources.length} 筆結果</span>
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
-              {filteredResources.map((resource) => (
+              {paginatedResources.map((resource) => (
                 <article
                   key={resource.id}
                   onClick={() => setSelectedId(resource.id)}
@@ -216,6 +363,27 @@ export function ResourceMapSection({ resources, usingFallback = false }: Resourc
                   </button>
                 </article>
               ))}
+            </div>
+            <div className="mt-5 flex flex-col gap-3 rounded-[1.5rem] border border-border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={currentPage === 1}
+                className="rounded-full border border-border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                上一頁
+              </button>
+              <span className="text-center text-sm text-muted-foreground">
+                第 {currentPage} / {totalPages} 頁
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-full border border-border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                下一頁
+              </button>
             </div>
           </div>
         </div>

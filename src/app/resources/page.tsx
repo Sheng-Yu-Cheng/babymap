@@ -8,7 +8,7 @@ import { getTaipeiChildcareResources } from "@/lib/data/taipeiResources";
 const resourceTypes = ["托嬰中心", "親子館", "哺集乳室"];
 
 export default async function ResourcesPage() {
-  const { resources, usingFallback } = await getTaipeiChildcareResources();
+  const { resources, usingFallback, sourceStatus } = await getTaipeiChildcareResources();
 
   return (
     <main>
@@ -17,7 +17,7 @@ export default async function ResourcesPage() {
         title="找到附近可用的育兒支持"
         description="把托育、親子空間、照護設備與小兒科資源放到同一個入口，讓育兒支持不只查得到，也用得到。"
       />
-      <ResourceMapSection resources={resources} usingFallback={usingFallback} />
+      <ResourceMapSection resources={resources} usingFallback={usingFallback} sourceStatus={sourceStatus} />
       <Section title="資源類型" description="正式版本可以擴充成篩選器與地圖圖層。">
         <div className="flex flex-wrap gap-3">
           {resourceTypes.map((type) => (

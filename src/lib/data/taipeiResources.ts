@@ -12,7 +12,7 @@ const BREASTFEEDING_ROOM_URL =
 export type ChildcareResource = {
   id: string;
   name: string;
-  type: "nursery" | "parent-child-center" | "breastfeeding-room" | "demo";
+  type: "public_nursery" | "parent_child_center" | "breastfeeding_room" | "demo";
   typeLabel: "托嬰中心" | "親子館" | "哺集乳室" | "Demo";
   districtCode?: string;
   district?: string;
@@ -29,35 +29,85 @@ export type ChildcareResource = {
   lng?: number;
 };
 
+export type TaipeiResourceSourceStatus = {
+  ok: boolean;
+  rawRows: number;
+  normalizedRows: number;
+};
+
+export type TaipeiResourceSourceStatusMap = {
+  publicNursery: TaipeiResourceSourceStatus;
+  parentChildCenters: TaipeiResourceSourceStatus;
+  breastfeedingRooms: TaipeiResourceSourceStatus;
+};
+
 type RawCsvRow = Record<string, string | undefined>;
 
 type TaipeiSource = {
+  key: keyof TaipeiResourceSourceStatusMap;
   sourceName: string;
   sourceUrl: string;
   type: ChildcareResource["type"];
   typeLabel: ChildcareResource["typeLabel"];
 };
 
+const knownHeaderNames = new Set([
+  "機關名稱",
+  "機構名稱",
+  "場所名稱",
+  "名稱",
+  "地址",
+  "電話",
+  "分機",
+  "行政區",
+  "開放時間",
+  "位置指引",
+  "基本設備",
+  "友善設備或服務",
+  "貼心小提醒",
+]);
+
 const taipeiSources: TaipeiSource[] = [
   {
+    key: "publicNursery",
     sourceName: "臺北市公私立托嬰中心",
     sourceUrl: PUBLIC_NURSERY_URL,
-    type: "nursery",
+    type: "public_nursery",
     typeLabel: "托嬰中心",
   },
   {
+    key: "parentChildCenters",
     sourceName: "臺北市親子館",
     sourceUrl: PARENT_CHILD_CENTER_URL,
-    type: "parent-child-center",
+    type: "parent_child_center",
     typeLabel: "親子館",
   },
   {
+    key: "breastfeedingRooms",
     sourceName: "臺北市哺集乳室",
     sourceUrl: BREASTFEEDING_ROOM_URL,
-    type: "breastfeeding-room",
+    type: "breastfeeding_room",
     typeLabel: "哺集乳室",
   },
 ];
+
+function cleanCsvText(csvText: string) {
+  return csvText.replace(/^\uFEFF/, "");
+}
+
+function cleanHeader(header: string) {
+  return header.replace(/^\uFEFF/, "").trim();
+}
+
+function cleanValue(value: unknown) {
+  return typeof value === "string" ? value.replace(/^\uFEFF/, "").trim() : value;
+}
+
+function cleanRow(row: RawCsvRow): RawCsvRow {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [cleanHeader(key), typeof value === "string" ? value.trim() : value]),
+  );
+}
 
 function pick(row: RawCsvRow, keys: string[]) {
   for (const key of keys) {
@@ -69,6 +119,10 @@ function pick(row: RawCsvRow, keys: string[]) {
   return undefined;
 }
 
+function collect(row: RawCsvRow, keys: string[]) {
+  return keys.map((key) => pick(row, [key])).filter((value): value is string => Boolean(value));
+}
+
 function parseNumber(value?: string) {
   if (!value) return undefined;
   const parsed = Number(value);
@@ -77,32 +131,51 @@ function parseNumber(value?: string) {
 }
 
 function normalizeRow(row: RawCsvRow, source: TaipeiSource, index: number): ChildcareResource | null {
-  const name = pick(row, ["名稱", "機構名稱", "場館名稱", "單位名稱", "Name", "name"]);
+  const cleanedRow = cleanRow(row);
+  const name = pick(cleanedRow, [
+    "機關名稱",
+    "機構名稱",
+    "場所名稱",
+    "名稱",
+    "場館名稱",
+    "單位名稱",
+    "Name",
+    "name",
+  ]);
   if (!name) return null;
 
-  const district = pick(row, ["行政區", "區別", "區", "district"]);
-  const address = pick(row, ["地址", "機構地址", "場館地址", "地點", "address"]);
-  const phone = pick(row, ["電話", "連絡電話", "聯絡電話", "洽詢電話", "phone"]);
-  const extension = pick(row, ["分機", "extension"]);
-  const capacity = pick(row, ["核定收托人數", "收托人數", "容留人數", "capacity"]);
-  const openingHours = pick(row, ["開放時間", "服務時間", "營業時間", "openingHours"]);
-  const notes = pick(row, ["備註", "說明", "服務內容", "notes"]);
-  const lat = parseNumber(pick(row, ["緯度", "lat", "latitude", "Latitude"]));
-  const lng = parseNumber(pick(row, ["經度", "lng", "longitude", "Longitude"]));
+  const notes = collect(cleanedRow, [
+    "位置指引",
+    "基本設備",
+    "友善設備或服務",
+    "貼心小提醒",
+    "備註",
+    "說明",
+    "服務內容",
+    "notes",
+  ]).join("；");
+  const district = pick(cleanedRow, ["行政區", "區別", "區", "district"]);
+  const address = pick(cleanedRow, ["地址", "機構地址", "場館地址", "地點", "address"]);
+  const phone = pick(cleanedRow, ["電話", "連絡電話", "聯絡電話", "洽詢電話", "phone"]);
+  const extension = pick(cleanedRow, ["分機", "extension"]);
+  const capacity = pick(cleanedRow, ["核定收托人數", "收托人數", "容留人數", "capacity"]);
+  const openingHours = pick(cleanedRow, ["開放時間", "服務時間", "營業時間", "openingHours"]);
+  const lat = parseNumber(pick(cleanedRow, ["緯度", "lat", "latitude", "Latitude"]));
+  const lng = parseNumber(pick(cleanedRow, ["經度", "lng", "longitude", "Longitude"]));
 
   return {
     id: `${source.type}-${index}-${name}`,
     name,
     type: source.type,
     typeLabel: source.typeLabel,
-    districtCode: pick(row, ["行政區代碼", "區碼", "districtCode"]),
+    districtCode: pick(cleanedRow, ["行政區代碼", "區碼", "districtCode"]),
     district,
     address,
     phone,
     extension,
     capacity,
     openingHours,
-    notes,
+    notes: notes || undefined,
     sourceName: source.sourceName,
     sourceUrl: source.sourceUrl,
     isRealData: true,
@@ -111,7 +184,45 @@ function normalizeRow(row: RawCsvRow, source: TaipeiSource, index: number): Chil
   };
 }
 
-async function fetchCsvSource(source: TaipeiSource) {
+function parseCsvText(csvText: string) {
+  return Papa.parse<RawCsvRow>(cleanCsvText(csvText), {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: cleanHeader,
+    transform: cleanValue,
+  });
+}
+
+function scoreHeaders(row: RawCsvRow | undefined) {
+  if (!row) return 0;
+
+  return Object.keys(row).filter((header) => knownHeaderNames.has(cleanHeader(header))).length;
+}
+
+function parseCsvBuffer(buffer: ArrayBuffer, source: TaipeiSource) {
+  const candidates = ["utf-8", "big5"].map((encoding) => {
+    const csvText = new TextDecoder(encoding).decode(buffer);
+    const parsed = parseCsvText(csvText);
+    const resources = parsed.data
+      .map((row, index) => normalizeRow(row, source, index))
+      .filter((resource): resource is ChildcareResource => Boolean(resource));
+
+    return {
+      parsed,
+      resources,
+      score: scoreHeaders(parsed.data[0]) + resources.length * 10,
+    };
+  });
+
+  return candidates.sort((a, b) => b.score - a.score)[0];
+}
+
+async function fetchCsvSource(source: TaipeiSource): Promise<{
+  source: TaipeiSource;
+  ok: boolean;
+  rawRows: number;
+  resources: ChildcareResource[];
+}> {
   const response = await fetch(source.sourceUrl, {
     next: { revalidate: 86400 },
   });
@@ -120,19 +231,19 @@ async function fetchCsvSource(source: TaipeiSource) {
     throw new Error(`Failed to fetch ${source.sourceName}: ${response.status}`);
   }
 
-  const csvText = await response.text();
-  const parsed = Papa.parse<RawCsvRow>(csvText, {
-    header: true,
-    skipEmptyLines: true,
-  });
+  const csvBuffer = await response.arrayBuffer();
+  const { parsed, resources } = parseCsvBuffer(csvBuffer, source);
 
-  if (parsed.errors.length > 0) {
+  if (parsed.errors.length > 0 && parsed.data.length === 0) {
     throw new Error(`Failed to parse ${source.sourceName}`);
   }
 
-  return parsed.data
-    .map((row, index) => normalizeRow(row, source, index))
-    .filter((resource): resource is ChildcareResource => Boolean(resource));
+  return {
+    source,
+    ok: true,
+    rawRows: parsed.data.length,
+    resources,
+  };
 }
 
 function getFallbackResources(): ChildcareResource[] {
@@ -155,29 +266,41 @@ function getFallbackResources(): ChildcareResource[] {
 export async function getTaipeiChildcareResources(): Promise<{
   resources: ChildcareResource[];
   usingFallback: boolean;
+  sourceStatus: TaipeiResourceSourceStatusMap;
 }> {
-  try {
-    // Future open-data expansion point:
-    // Add schema validation and per-source field mappings here as Taipei datasets evolve.
-    // If any upstream fetch or CSV parse fails, the class demo keeps working via fallback data.
-    const resourcesBySource = await Promise.all(taipeiSources.map((source) => fetchCsvSource(source)));
-    const resources = resourcesBySource.flat();
+  const sourceStatus: TaipeiResourceSourceStatusMap = {
+    publicNursery: { ok: false, rawRows: 0, normalizedRows: 0 },
+    parentChildCenters: { ok: false, rawRows: 0, normalizedRows: 0 },
+    breastfeedingRooms: { ok: false, rawRows: 0, normalizedRows: 0 },
+  };
 
-    if (resources.length === 0) {
-      return {
-        resources: getFallbackResources(),
-        usingFallback: true,
-      };
-    }
+  // Future open-data expansion point:
+  // Add stricter schema validation and per-source field mappings here as Taipei datasets evolve.
+  // Each source is isolated so one broken CSV cannot hide the other working datasets.
+  const settledSources = await Promise.allSettled(taipeiSources.map((source) => fetchCsvSource(source)));
+  const resources = settledSources.flatMap((result) => {
+    if (result.status === "rejected") return [];
 
-    return {
-      resources,
-      usingFallback: false,
+    sourceStatus[result.value.source.key] = {
+      ok: result.value.ok,
+      rawRows: result.value.rawRows,
+      normalizedRows: result.value.resources.length,
     };
-  } catch {
+
+    return result.value.resources;
+  });
+
+  if (resources.length === 0) {
     return {
       resources: getFallbackResources(),
       usingFallback: true,
+      sourceStatus,
     };
   }
+
+  return {
+    resources,
+    usingFallback: false,
+    sourceStatus,
+  };
 }

@@ -20,6 +20,16 @@ const districtCoordinates: Record<string, { lat: number; lng: number }> = {
   文山區: { lat: 24.997, lng: 121.57 },
 };
 
+function hashText(text: string) {
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
 function inferDistrict(resource: ChildcareResource) {
   if (resource.district && districtCoordinates[resource.district]) {
     return resource.district;
@@ -39,10 +49,12 @@ export function getDemoCoordinate(resource: ChildcareResource, index: number) {
 
   const district = inferDistrict(resource);
   const base = district ? districtCoordinates[district] : TAIPEI_CENTER;
-  const ring = (index % 8) + 1;
-  const direction = index % 2 === 0 ? 1 : -1;
-  const latOffset = direction * ring * 0.0018;
-  const lngOffset = -direction * ((index % 5) + 1) * 0.0016;
+  const hash = hashText(`${resource.id}-${resource.name}-${index}`);
+  const angle = ((hash % 360) * Math.PI) / 180;
+  const radius = 0.0025 + ((hash % 17) / 17) * 0.014;
+  const wave = (((hash >> 4) % 9) - 4) * 0.00045;
+  const latOffset = Math.sin(angle) * radius + wave;
+  const lngOffset = Math.cos(angle) * radius * 1.18 - wave / 2;
 
   return {
     lat: base.lat + latOffset,
