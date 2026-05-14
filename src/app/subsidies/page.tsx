@@ -9,7 +9,7 @@ export default function SubsidiesPage() {
       <PageHero
         eyebrow="補助與預算試算"
         title="把育兒成本變成可以規劃的數字"
-        description="用簡化試算先看見每月支出、可申請補助與補助後負擔，正式金額仍需以官方資訊為準。"
+        description="輸入居住縣市、家庭收入、胎次與托育方式，先用 demo 估算看見每月支出、可申請補助與補助後負擔。"
       />
       <BudgetSection />
       <RelatedLinks links={relatedFeatureLinks.subsidies} />
