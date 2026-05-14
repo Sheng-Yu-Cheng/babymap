@@ -1,74 +1,97 @@
 "use client";
 
-import { Baby, Building2, HeartPulse, Home, Milk, Users } from "lucide-react";
+import { Baby, Building2, Milk, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Section } from "@/components/Section";
-import { getChildcareResources } from "@/lib/data/childcareResources";
+import type { ChildcareResource } from "@/lib/data/taipeiResources";
 import { cn } from "@/lib/utils";
 
-const resourceTypes = ["全部", "公托", "準公托", "保母", "親子館", "哺乳室", "小兒科"];
-const childcareResources = getChildcareResources();
+const resourceTypes = ["全部", "托嬰中心", "親子館", "哺集乳室"];
+const markerPositions = [
+  "left-[18%] top-[34%]",
+  "left-[58%] top-[24%]",
+  "left-[72%] top-[64%]",
+  "left-[36%] top-[68%]",
+  "left-[78%] top-[28%]",
+  "left-[45%] top-[42%]",
+  "left-[24%] top-[58%]",
+  "left-[64%] top-[48%]",
+];
 
 const markerStyles = {
-  公托: {
+  托嬰中心: {
     icon: Building2,
     className: "bg-primary text-primary-foreground",
-  },
-  準公托: {
-    icon: Home,
-    className: "bg-secondary text-secondary-foreground",
-  },
-  保母: {
-    icon: Baby,
-    className: "bg-foreground text-primary-foreground",
   },
   親子館: {
     icon: Users,
     className: "bg-accent text-accent-foreground",
   },
-  哺乳室: {
+  哺集乳室: {
     icon: Milk,
     className: "bg-white text-primary",
   },
-  小兒科: {
-    icon: HeartPulse,
-    className: "bg-[#f9d7d0] text-[#7a2c20]",
+  Demo: {
+    icon: Baby,
+    className: "bg-foreground text-primary-foreground",
   },
 };
 
 function getMarkerStyle(type: string) {
-  return markerStyles[type as keyof typeof markerStyles] ?? markerStyles.親子館;
+  return markerStyles[type as keyof typeof markerStyles] ?? markerStyles.Demo;
 }
 
-export function ResourceMapSection() {
-  const [region, setRegion] = useState("台北市大安區");
+type ResourceMapSectionProps = {
+  resources: ChildcareResource[];
+  usingFallback?: boolean;
+};
+
+export function ResourceMapSection({ resources, usingFallback = false }: ResourceMapSectionProps) {
+  const districtOptions = useMemo(() => {
+    const districts = resources
+      .map((resource) => resource.district)
+      .filter((district): district is string => Boolean(district));
+
+    return ["全部", ...Array.from(new Set(districts)).slice(0, 12)];
+  }, [resources]);
+  const [region, setRegion] = useState("全部");
   const [resourceType, setResourceType] = useState("全部");
-  const [openOnly, setOpenOnly] = useState(true);
+  const [openOnly, setOpenOnly] = useState(false);
   const [reservableOnly, setReservableOnly] = useState(false);
-  const [subsidizedOnly, setSubsidizedOnly] = useState(false);
+  const [realDataOnly, setRealDataOnly] = useState(false);
 
   const filteredResources = useMemo(
     () =>
-      childcareResources.filter((resource) => {
-        if (resource.region !== region) return false;
-        if (resourceType !== "全部" && resource.type !== resourceType) return false;
-        if (openOnly && !resource.isOpen) return false;
-        if (reservableOnly && !resource.reservable) return false;
-        if (subsidizedOnly && !resource.subsidized) return false;
+      resources.filter((resource) => {
+        if (region !== "全部" && resource.district !== region) return false;
+        if (resourceType !== "全部" && resource.typeLabel !== resourceType) return false;
+        if (openOnly && !resource.openingHours) return false;
+        if (reservableOnly && resource.typeLabel !== "托嬰中心" && resource.typeLabel !== "親子館") return false;
+        if (realDataOnly && !resource.isRealData) return false;
         return true;
       }),
-    [openOnly, region, reservableOnly, resourceType, subsidizedOnly],
+    [openOnly, realDataOnly, region, reservableOnly, resourceType, resources],
   );
+  const visibleMapResources = filteredResources.slice(0, 8);
 
   return (
     <Section
       id="resources"
       eyebrow="托育資源地圖"
       title="查得到，也用得到"
-      description="用靜態 mock map 呈現附近托育、照護、親子空間與醫療資源。這裡不使用真實地圖 API。"
+      description="整合臺北市公開資料，並保留 BabyMap demo 備援。這裡仍使用靜態地圖示意，尚未接入真實地圖 API。"
       className="bg-white/48"
     >
+      <div className="mb-6 rounded-[1.5rem] border border-border bg-white p-4 text-sm leading-6 text-muted-foreground shadow-sm">
+        <p>部分資料來源：臺北市資料大平臺</p>
+        {usingFallback ? (
+          <p className="mt-2 text-primary">
+            目前顯示 BabyMap demo 資料，公開資料讀取失敗時會自動切換為備用資料。
+          </p>
+        ) : null}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <aside className="h-fit rounded-[1.75rem] border border-border bg-white p-5 shadow-sm lg:sticky lg:top-24">
           <h3 className="text-lg font-semibold">篩選附近資源</h3>
@@ -84,7 +107,9 @@ export function ResourceMapSection() {
                 onChange={(event) => setRegion(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 outline-none focus:border-primary"
               >
-                <option>台北市大安區</option>
+                {districtOptions.map((district) => (
+                  <option key={district}>{district}</option>
+                ))}
               </select>
             </label>
 
@@ -116,8 +141,8 @@ export function ResourceMapSection() {
               <FilterToggle active={reservableOnly} onClick={() => setReservableOnly((value) => !value)}>
                 是否可預約
               </FilterToggle>
-              <FilterToggle active={subsidizedOnly} onClick={() => setSubsidizedOnly((value) => !value)}>
-                是否有補助
+              <FilterToggle active={realDataOnly} onClick={() => setRealDataOnly((value) => !value)}>
+                只看公開資料
               </FilterToggle>
             </div>
           </div>
@@ -136,15 +161,15 @@ export function ResourceMapSection() {
               <p className="text-sm text-muted-foreground">靜態地圖示意，無真實定位。</p>
             </div>
 
-            {filteredResources.map((resource) => {
-              const marker = getMarkerStyle(resource.type);
+            {visibleMapResources.map((resource, index) => {
+              const marker = getMarkerStyle(resource.typeLabel);
               const MarkerIcon = marker.icon;
 
               return (
                 <button
                   key={resource.id}
                   type="button"
-                  className={`absolute ${resource.position} z-10 flex h-12 w-12 items-center justify-center rounded-full border-4 border-white shadow-md ${marker.className}`}
+                  className={`absolute ${markerPositions[index % markerPositions.length]} z-10 flex h-12 w-12 items-center justify-center rounded-full border-4 border-white shadow-md ${marker.className}`}
                   title={resource.name}
                 >
                   <MarkerIcon className="h-5 w-5" aria-hidden="true" />
@@ -181,28 +206,36 @@ export function ResourceMapSection() {
                 <article key={resource.id} className="rounded-[1.5rem] border border-border bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-primary">{resource.type}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-primary">{resource.typeLabel}</p>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {resource.isRealData ? "公開資料" : "Demo"}
+                        </span>
+                      </div>
                       <h3 className="mt-1 text-lg font-semibold">{resource.name}</h3>
                     </div>
-                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                      {resource.distance}
-                    </span>
-                  </div>
-                  <p className="mt-3 inline-flex rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
-                    {resource.status}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {resource.tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                        {tag}
+                    {resource.district ? (
+                      <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                        {resource.district}
                       </span>
-                    ))}
+                    ) : null}
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm leading-6 text-muted-foreground">
+                    {resource.address ? <p>地址：{resource.address}</p> : null}
+                    {resource.phone ? (
+                      <p>
+                        電話：{resource.phone}
+                        {resource.extension ? ` #${resource.extension}` : ""}
+                      </p>
+                    ) : null}
+                    {resource.openingHours ? <p>時間：{resource.openingHours}</p> : null}
+                    <p>來源：{resource.sourceName}</p>
                   </div>
                   <button
                     type="button"
                     className="mt-5 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
                   >
-                    {resource.action}
+                    查看資料
                   </button>
                 </article>
               ))}
