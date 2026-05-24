@@ -2,7 +2,7 @@
 
 import { MessageCircleQuestion, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { Section } from "@/components/Section";
 import { anxietyCards } from "@/data/babymap";
@@ -19,10 +19,47 @@ const toolLinks: Record<string, string> = {
   安全機制: "/safety",
 };
 
+type AskBabyMapResponse = {
+  reply: string;
+  recommendedLinks: Array<{ label: string; href: string }>;
+};
+
 export function AnxietyBreakerSection() {
   const [selectedId, setSelectedId] = useState(anxietyCards[0].id);
   const [question, setQuestion] = useState("");
+  const [aiResponse, setAiResponse] = useState<AskBabyMapResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const selectedCard = anxietyCards.find((card) => card.id === selectedId) ?? anxietyCards[0];
+
+  async function handleAskBabyMap(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) return;
+
+    setLoading(true);
+    setErrorMessage("");
+    setAiResponse(null);
+
+    try {
+      const response = await fetch("/api/anxiety", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmedQuestion }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Ask BabyMap request failed");
+      }
+
+      const data = (await response.json()) as AskBabyMapResponse;
+      setAiResponse(data);
+    } catch {
+      setErrorMessage("暫時無法取得 AI 回應，先看看下方的焦慮破解卡片。");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <Section
@@ -33,23 +70,65 @@ export function AnxietyBreakerSection() {
       className="bg-white/48"
     >
       <div className="mb-6 rounded-[1.75rem] border border-border bg-white p-5 shadow-sm">
-        <label className="text-sm font-medium">
-          Ask BabyMap
-          <span className="mt-3 flex items-center gap-3 rounded-2xl border border-border bg-muted px-4 py-3">
-            <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-            <input
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
-              placeholder="輸入你在社群上看到的育兒焦慮..."
-            />
-          </span>
-        </label>
-        <p className="mt-4 rounded-2xl bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
-          Demo 回應：
-          {question
-            ? "這個擔心值得被認真看待。你可以先把它拆成金錢、照護、時間或分工問題，再用下方工具找到下一步。"
-            : "輸入後會顯示一段預設回應。此處沒有串接真實 AI。"}
+        <form onSubmit={handleAskBabyMap}>
+          <label className="text-sm font-medium">
+            Ask BabyMap
+            <span className="mt-3 flex flex-col gap-3 rounded-2xl border border-border bg-muted px-4 py-3 sm:flex-row sm:items-center">
+              <span className="flex min-w-0 flex-1 items-center gap-3">
+                <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                <input
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  maxLength={500}
+                  className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+                  placeholder="輸入你在社群上看到的育兒焦慮..."
+                />
+              </span>
+              <button
+                type="submit"
+                disabled={loading || !question.trim()}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "整理中..." : "送出"}
+              </button>
+            </span>
+          </label>
+        </form>
+
+        {loading ? (
+          <p className="mt-4 rounded-2xl bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
+            BabyMap 正在整理你的焦慮...
+          </p>
+        ) : null}
+
+        {errorMessage ? (
+          <p className="mt-4 rounded-2xl bg-muted p-4 text-sm leading-6 text-muted-foreground">
+            {errorMessage}
+          </p>
+        ) : null}
+
+        {aiResponse ? (
+          <div className="mt-4 rounded-2xl bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
+            <p className="font-semibold">BabyMap 回應</p>
+            <p className="mt-2">{aiResponse.reply}</p>
+            {aiResponse.recommendedLinks.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {aiResponse.recommendedLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-foreground transition hover:bg-accent hover:text-accent-foreground"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+          AI 回應僅供課堂 demo 與資訊整理參考，不取代專業醫療、法律或財務建議。
         </p>
       </div>
 
