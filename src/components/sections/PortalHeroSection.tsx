@@ -1,72 +1,134 @@
-import { MapPin, Search, ShieldCheck, Sparkles } from "lucide-react";
+"use client";
+
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
+import { cn } from "@/lib/utils";
+
+const autoplayDelay = 5500;
+
+const heroSlides = [
+  {
+    title: "BabyMap brand",
+    image: "/hero/babymap-brand.png",
+    href: "/resources",
+    alt: "BabyMap 育兒支持平台首頁",
+  },
+  {
+    title: "即時保母預約",
+    image: "/hero/booking.png",
+    href: "/booking",
+    alt: "即時保母預約功能介紹",
+  },
+  {
+    title: "我是保姆",
+    image: "/hero/sitter-registration.png",
+    href: "/sitter",
+    alt: "保姆註冊功能介紹",
+  },
+  {
+    title: "育兒資源地圖",
+    image: "/hero/resources-map.png",
+    href: "/resources",
+    alt: "育兒資源地圖功能介紹",
+  },
+];
 
 export function PortalHeroSection() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const activeSlide = heroSlides[activeIndex];
+
+  useEffect(() => {
+    if (paused) return undefined;
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % heroSlides.length);
+    }, autoplayDelay);
+
+    return () => window.clearInterval(timer);
+  }, [paused]);
+
+  function goToPrevious() {
+    setActiveIndex((current) => (current - 1 + heroSlides.length) % heroSlides.length);
+  }
+
+  function goToNext() {
+    setActiveIndex((current) => (current + 1) % heroSlides.length);
+  }
+
   return (
-    <section className="px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div>
-          <p className="mb-4 inline-flex rounded-full bg-secondary px-4 py-2 text-sm font-semibold text-secondary-foreground">
-            BabyMap 數位育兒支持入口
-          </p>
-          <h1 className="max-w-4xl text-4xl font-bold tracking-normal text-foreground sm:text-5xl lg:text-6xl">
-            不是催生，而是讓想生的人不再那麼害怕。
-          </h1>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-            BabyMap 是一個數位育兒支持 portal，整合補助、托育資源、臨時保姆、時間軸與焦慮破解，幫你把模糊的不確定感整理成可以查找與規劃的下一步。
-          </p>
-
-          <div className="mt-8 max-w-3xl rounded-[2rem] border border-border bg-white p-3 shadow-soft">
-            <label className="flex items-center gap-3 rounded-[1.35rem] bg-muted px-4 py-3">
-              <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-              <span className="sr-only">搜尋育兒支持</span>
-              <input
-                className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none placeholder:text-muted-foreground"
-                placeholder="搜尋補助、托育、臨時保姆、育兒焦慮..."
+    <section
+      className="bg-background px-4 py-8 sm:px-6 lg:px-8 lg:py-12"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      aria-label="BabyMap homepage hero carousel"
+    >
+      <div className="mx-auto max-w-6xl">
+        <div className="relative overflow-hidden rounded-[2rem] border border-border bg-white shadow-soft">
+          <Link
+            href={activeSlide.href}
+            className="relative block aspect-video w-full bg-[#fffaf6] focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+            aria-label={`${activeSlide.alt}，前往${activeSlide.title}`}
+          >
+            {failedImages[activeSlide.image] ? (
+              <div className="flex h-full w-full items-center justify-center p-8 text-center">
+                <div className="rounded-[1.5rem] border border-border bg-white p-6 shadow-sm">
+                  <p className="text-sm font-semibold text-primary">BabyMap</p>
+                  <p className="mt-2 text-xl font-bold">{activeSlide.alt}</p>
+                </div>
+              </div>
+            ) : (
+              <Image
+                src={activeSlide.image}
+                alt={activeSlide.alt}
+                fill
+                priority={activeIndex === 0}
+                sizes="(max-width: 768px) 100vw, 1152px"
+                className="object-contain"
+                onError={() =>
+                  setFailedImages((current) => ({
+                    ...current,
+                    [activeSlide.image]: true,
+                  }))
+                }
               />
-            </label>
-          </div>
+            )}
+          </Link>
 
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/resources"
-              className="rounded-full bg-primary px-6 py-3 text-center font-medium text-primary-foreground shadow-sm transition hover:opacity-90"
-            >
-              查找育兒資源
-            </Link>
-            <Link
-              href="/booking"
-              className="rounded-full border border-border bg-white px-6 py-3 text-center font-medium text-foreground shadow-sm transition hover:border-primary"
-            >
-              預約即時保姆
-            </Link>
-          </div>
-        </div>
+          <button
+            type="button"
+            onClick={goToPrevious}
+            className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/86 text-foreground shadow-sm backdrop-blur transition hover:border-primary sm:left-5 sm:h-12 sm:w-12"
+            aria-label="上一張首頁圖片"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={goToNext}
+            className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/86 text-foreground shadow-sm backdrop-blur transition hover:border-primary sm:right-5 sm:h-12 sm:w-12"
+            aria-label="下一張首頁圖片"
+          >
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+          </button>
 
-        <div className="rounded-[2rem] border border-border bg-white/86 p-5 shadow-soft">
-          <div className="rounded-[1.5rem] bg-secondary p-5">
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">今日入口建議</p>
-                  <h2 className="mt-1 text-2xl font-semibold">先找到可用支持</h2>
-                </div>
-                <Sparkles className="h-8 w-8 text-primary" aria-hidden="true" />
-              </div>
-              <div className="mt-5 grid gap-3">
-                <div className="flex items-center gap-3 rounded-2xl bg-muted p-4">
-                  <MapPin className="h-5 w-5 text-primary" aria-hidden="true" />
-                  <span className="text-sm font-medium">附近 8 個育兒資源</span>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-muted p-4">
-                  <ShieldCheck className="h-5 w-5 text-secondary-foreground" aria-hidden="true" />
-                  <span className="text-sm font-medium">保母認證與服務紀錄提示</span>
-                </div>
-              </div>
-            </div>
-            <p className="mt-4 rounded-2xl bg-white/70 p-4 text-sm leading-6 text-secondary-foreground">
-              BabyMap 把「我不知道該怎麼辦」變成「我可以先查哪一項」。
-            </p>
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 rounded-full border border-white/70 bg-white/86 px-3 py-2 shadow-sm backdrop-blur">
+            {heroSlides.map((slide, index) => (
+              <button
+                key={slide.image}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                className={cn(
+                  "h-2.5 rounded-full transition-all",
+                  index === activeIndex ? "w-9 bg-primary" : "w-2.5 bg-muted-foreground/35 hover:bg-primary/60",
+                )}
+                aria-label={`切換到${slide.alt}`}
+              />
+            ))}
           </div>
         </div>
       </div>
