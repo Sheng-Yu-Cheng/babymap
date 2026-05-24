@@ -1,6 +1,6 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-import { supabase } from "@/lib/supabase/client";
+import { assertSupabaseEnv, supabase } from "@/lib/supabase/client";
 import type {
   Babysitter,
   BookingRequest,
@@ -24,6 +24,7 @@ function assertNoError(error: unknown, action: string) {
 }
 
 export async function listBabysitters(): Promise<Babysitter[]> {
+  assertSupabaseEnv();
   const { data, error } = await supabase
     .from(babysitterTable)
     .select("*")
@@ -35,6 +36,7 @@ export async function listBabysitters(): Promise<Babysitter[]> {
 }
 
 export async function createBabysitter(input: CreateBabysitterInput): Promise<Babysitter> {
+  assertSupabaseEnv();
   const { data, error } = await supabase
     .from(babysitterTable)
     .insert({
@@ -52,6 +54,7 @@ export async function createBabysitter(input: CreateBabysitterInput): Promise<Ba
 }
 
 export async function getBabysitterByCode(code: string): Promise<Babysitter | null> {
+  assertSupabaseEnv();
   const { data, error } = await supabase
     .from(babysitterTable)
     .select("*")
@@ -63,6 +66,7 @@ export async function getBabysitterByCode(code: string): Promise<Babysitter | nu
 }
 
 export async function listBookingRequestsForSitter(babysitterId: string): Promise<BookingRequest[]> {
+  assertSupabaseEnv();
   const { data, error } = await supabase
     .from(bookingRequestsTable)
     .select("*")
@@ -74,6 +78,7 @@ export async function listBookingRequestsForSitter(babysitterId: string): Promis
 }
 
 export async function createBookingRequest(input: CreateBookingRequestInput): Promise<BookingRequest> {
+  assertSupabaseEnv();
   const { data, error } = await supabase
     .from(bookingRequestsTable)
     .insert({
@@ -93,6 +98,7 @@ export async function updateBookingRequestStatus(
   id: string,
   status: BookingRequestStatus,
 ): Promise<BookingRequest> {
+  assertSupabaseEnv();
   const { data, error } = await supabase
     .from(bookingRequestsTable)
     .update({
@@ -113,6 +119,7 @@ export function subscribeToBookingRequestsForSitter(
   babysitterId: string,
   callback: (request: BookingRequest) => void,
 ): RealtimeChannel {
+  assertSupabaseEnv();
   return supabase
     .channel(`booking-requests:${babysitterId}`)
     .on(
@@ -131,6 +138,7 @@ export function subscribeToBookingRequestsForSitter(
 }
 
 export function subscribeToBabysitters(callback: (babysitter: Babysitter) => void): RealtimeChannel {
+  assertSupabaseEnv();
   return supabase
     .channel("babysitters")
     .on(

@@ -16,6 +16,7 @@ export const navItems = [
   { label: "托育地圖", href: "/resources" },
   { label: "焦慮破解", href: "/anxiety" },
   { label: "父職專區", href: "/dad-mode" },
+  { label: "我是保姆", href: "/sitter" },
 ];
 
 export const portalActions = [
