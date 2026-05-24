@@ -137,6 +137,28 @@ export function subscribeToBookingRequestsForSitter(
     .subscribe();
 }
 
+export function subscribeToBookingRequest(
+  requestId: string,
+  callback: (request: BookingRequest) => void,
+): RealtimeChannel {
+  assertSupabaseEnv();
+  return supabase
+    .channel(`booking-request:${requestId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: bookingRequestsTable,
+        filter: `id=eq.${requestId}`,
+      },
+      (payload) => {
+        callback(payload.new as BookingRequest);
+      },
+    )
+    .subscribe();
+}
+
 export function subscribeToBabysitters(callback: (babysitter: Babysitter) => void): RealtimeChannel {
   assertSupabaseEnv();
   return supabase

@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 
 import type { Babysitter } from "@/data/babymap";
 import { bookingSafetyProtections } from "@/data/babymap";
-import { createBookingRequest } from "@/lib/data/babysitterBackend";
+import { createBookingRequest, subscribeToBookingRequest } from "@/lib/data/babysitterBackend";
+import type { BookingRequest } from "@/lib/supabase/types";
 
 type BookingSummaryProps = {
   serviceType: string;
@@ -33,12 +34,26 @@ export function BookingSummary({
   const [parentPhone, setParentPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
+  const [currentRequest, setCurrentRequest] = useState<BookingRequest | null>(null);
   const estimatedCost = babysitter.pricePerHour * 4;
   const canPersist = dataSource === "backend";
 
   useEffect(() => {
     setSubmitState({ status: "idle" });
+    setCurrentRequest(null);
   }, [serviceType, location, time, childAge, babysitter.id, dataSource]);
+
+  useEffect(() => {
+    if (!currentRequest?.id || !canPersist) return undefined;
+
+    const channel = subscribeToBookingRequest(currentRequest.id, (request) => {
+      setCurrentRequest(request);
+    });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [canPersist, currentRequest?.id]);
 
   async function handleConfirmBooking() {
     if (!babysitter) {
@@ -67,6 +82,7 @@ export function BookingSummary({
         notes: notes.trim() || undefined,
       });
 
+      setCurrentRequest(request);
       setSubmitState({ status: "persisted", requestId: request.id });
     } catch (error) {
       const message = error instanceof Error ? error.message : "預約請求送出失敗，請稍後再試。";
@@ -149,6 +165,7 @@ export function BookingSummary({
         {submitState.status === "submitting" ? "送出中..." : "確認預約"}
       </button>
       <SubmitMessage submitState={submitState} canPersist={canPersist} />
+      {currentRequest ? <RequestStatusPanel request={currentRequest} /> : null}
     </aside>
   );
 }
@@ -158,6 +175,33 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-start justify-between gap-4">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="text-right font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function RequestStatusPanel({ request }: { request: BookingRequest }) {
+  if (request.status === "accepted") {
+    return (
+      <div className="mt-4 rounded-2xl bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
+        <p className="font-semibold">保姆已接受預約</p>
+        <p className="mt-1">正式平台會在此提供聯絡方式、服務紀錄與安全提醒。</p>
+      </div>
+    );
+  }
+
+  if (request.status === "declined") {
+    return (
+      <div className="mt-4 rounded-2xl bg-muted p-4 text-sm leading-6 text-muted-foreground">
+        <p className="font-semibold text-foreground">保姆已拒絕預約</p>
+        <p className="mt-1">你可以選擇其他保母重新送出請求。</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-border bg-white p-4 text-sm leading-6">
+      <p className="font-semibold text-primary">等待保姆回覆</p>
+      <p className="mt-1 text-muted-foreground">此區會在保姆端接受或拒絕後自動更新。</p>
     </div>
   );
 }
