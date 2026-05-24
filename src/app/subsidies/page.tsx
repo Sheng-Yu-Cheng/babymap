@@ -8,8 +8,8 @@ export default function SubsidiesPage() {
     <main>
       <PageHero
         eyebrow="補助與預算試算"
-        title="把育兒成本變成可以規劃的數字"
-        description="輸入居住縣市、家庭收入、胎次與托育方式，先用 demo 估算看見每月支出、可申請補助與補助後負擔。"
+        title="用官方來源整理補助，把育兒成本變成可以規劃的數字"
+        description="BabyMap 以官方來源 curated data 呈現生育獎勵、托育補助與育兒津貼；計算為 demo，實際資格與金額仍依主管機關公告與審核為準。"
       />
       <BudgetSection />
       <RelatedLinks links={relatedFeatureLinks.subsidies} />
